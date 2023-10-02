@@ -5,22 +5,37 @@ import java.util.Scanner;
 import java.util.concurrent.*;
 
 public class Main {
-    public static void main(String[] args) {
-        int[] arr = {3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5};
-
-        // Создаем ForkJoinPool
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
+        int[] arr = new int[10000];
+        for(int i = 0; i < 10000; i++ ){
+            arr[i] = (int) (Math.random() * 1000000);
+        }
+        long startTime = System.currentTimeMillis();
+        int min = sequentially(arr);
+        long endTime = System.currentTimeMillis();
+        System.out.println(min + " Время выполнения: " + (endTime - startTime));
+        startTime = System.currentTimeMillis();
+        min = findMinElement(arr, 5);
+        endTime = System.currentTimeMillis();
+        System.out.println(min + " Время выполнения: " + (endTime - startTime));
         ForkJoinPool pool = new ForkJoinPool();
-
-        // Создаем задачу для поиска минимального элемента
+        startTime = System.currentTimeMillis();
         MinElementFinderFork task = new MinElementFinderFork(arr, 0, arr.length - 1);
-
-        // Запускаем задачу и получаем результат
-        int min = pool.invoke(task);
-
-        // Завершаем пул
+        min = pool.invoke(task);
         pool.shutdown();
-
-        System.out.println("Минимальный элемент: " + min);
+        endTime = System.currentTimeMillis();
+        System.out.println(min + " Время выполнения: " + (endTime-startTime));
+        //task2();
+//        BlockingQueue<File> queue = new LinkedBlockingQueue<>(5);
+//        ExecutorService executor = Executors.newCachedThreadPool();
+//
+//        executor.execute(new FileGenerator(queue));
+//
+//        for (String fileType : new String[]{"XML", "JSON", "XLS"}) {
+//            executor.execute(new FileProcessor(queue, fileType));
+//        }
+//
+//        executor.shutdown();
     }
     //Задание 1. Последовательное выполнение. Вариант минимальное значение в массиве.
     public static int sequentially(int[] array) {
@@ -47,16 +62,13 @@ public class Main {
         if (numThreads <= 0) {
             throw new IllegalArgumentException("Количество потоков должно быть положительным числом");
         }
-        // Создаем пул потоков и список для будущих результатов
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
 
         List<Future<Integer>> futures = new ArrayList<>();
 
-        // Разделяем массив на части
         int chunkSize = arr.length / numThreads;
         int remainder = arr.length % numThreads;
 
-        // Запускаем потоки для поиска минимального элемента в каждой части
         int startIndex = 0;
         for (int i = 0; i < numThreads; i++) {
             int endIndex = startIndex + chunkSize + (i == numThreads - 1 ? remainder : 0);
@@ -68,6 +80,11 @@ public class Main {
                     if (chunk[j] < min) {
                         min = chunk[j];
                     }
+                    try {
+                        Thread.sleep(1);
+                    }catch (InterruptedException e){
+                        e.printStackTrace();
+                    }
                 }
                 return min;
             };
@@ -78,7 +95,6 @@ public class Main {
             startIndex = endIndex;
         }
 
-        // Находим минимум среди результатов выполнения задач
         int min = Integer.MAX_VALUE;
         for (Future<Integer> future : futures) {
             int result = future.get();
@@ -89,7 +105,6 @@ public class Main {
 
         // Завершаем пул потоков
         executor.shutdown();
-
         return min;
     }
     //Задание 2.
